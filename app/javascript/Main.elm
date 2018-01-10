@@ -1,11 +1,13 @@
 module Main exposing (..)
 
+import Http
 import Html exposing (Html, body, div, h1, h2, p, input, text, label, button)
 import Html.Attributes exposing (style, type_, placeholder, value)
 import Html.Events exposing (onInput, onClick)
 import Date exposing (Date)
 
 import Json.Decode exposing (..)
+import Json.Encode
 
 -- MODEL
 
@@ -49,7 +51,7 @@ messagesDecoder = list messageDecoder
 
 -- INIT
 
-init_messages_json =
+initMessagesJson =
   """
   [
     {
@@ -67,14 +69,13 @@ init_messages_json =
   ]
   """
 
-init_messages_test =
-  decodeString messagesDecoder init_messages_json
+initMessagesResult =
+  decodeString messagesDecoder initMessagesJson
 
-edbaskerville = User "edbaskerville"
-peidran = User "peidran"
+initMessages = []
 
-init_messages =
-  case init_messages_test of
+initMessagesOld =
+  case initMessagesResult of
     Ok messages ->
       messages
     
@@ -83,9 +84,11 @@ init_messages =
 
 init : (Model, Cmd Msg)
 init =
-  ( Model edbaskerville init_messages ""
-  , Cmd.none
+  ( Model (User "edbaskerville") initMessages ""
+  , getMessages
   )
+
+
 
 -- VIEW
 
@@ -162,6 +165,9 @@ type Msg
   = SetUsername String
   | UpdateNextMessageBody String
   | PostMessage
+  | AddMessage (Result Http.Error (Message))
+  | UpdateMessages (Result Http.Error (List Message))
+
 
 -- UPDATE
 
@@ -173,11 +179,36 @@ update msg model =
     UpdateNextMessageBody body ->
       ({model | nextMessageBody = body}, Cmd.none)
     PostMessage ->
-      ( { model | messages =
-        ( model.messages ++ [Message model.user model.nextMessageBody Nothing] )
-        }
+      (model, postMessage model)
+    AddMessage (Ok message) ->
+      ( { model | messages = (model.messages ++ [message]) }, Cmd.none)
+    AddMessage (Err _) ->
+      (model, Cmd.none)
+    UpdateMessages (Ok messages) ->
+      ( { model | messages = messages }
       , Cmd.none
       )
+    UpdateMessages (Err _) ->
+      (model, Cmd.none)
+
+postMessage : Model -> Cmd Msg
+postMessage model =
+  Http.send AddMessage <|
+    Http.post "http://salon2020.herokuapp.com/messages"
+      ( Http.jsonBody (
+          Json.Encode.object
+          [ ("author", Json.Encode.string model.user.name)
+          , ("body", Json.Encode.string model.nextMessageBody)
+          ]
+        )
+      )
+      messageDecoder
+
+getMessages : Cmd Msg
+getMessages =
+  Http.send UpdateMessages <|
+    Http.get "http://salon2020.herokuapp.com/messages" messagesDecoder
+
 
 -- SUBSCRIPTIONS
 
