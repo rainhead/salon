@@ -1,7 +1,8 @@
 module Main exposing (..)
 
-import Html exposing (Html, body, div, h1, h2, p, text)
-import Html.Attributes exposing (style)
+import Html exposing (Html, body, div, h1, h2, p, input, text, label, button)
+import Html.Attributes exposing (style, type_, placeholder, value)
+import Html.Events exposing (onInput, onClick)
 import Date exposing (..)
 
 -- MODEL
@@ -19,6 +20,7 @@ type alias Message =
 type alias Model =
   { user     : User
   , messages : List Message
+  , nextMessageBody : String
   }
 
 -- INIT
@@ -26,13 +28,14 @@ type alias Model =
 edbaskerville = User "edbaskerville"
 peidran = User "peidran"
 
+init_messages =
+  [ Message edbaskerville "12:56 PM" (fromTime ((1515532452 - 7200) * 1000))
+  , Message peidran "What time is it?" (fromTime ((1515532366 - 3600) * 1000))
+  ]
+
 init : (Model, Cmd Msg)
 init =
-  ( Model
-    edbaskerville
-    [ Message edbaskerville "12:56 PM" (fromTime ((1515532452 - 7200) * 1000))
-    , Message peidran "What time is it?" (fromTime ((1515532366 - 3600) * 1000))
-    ]
+  ( Model edbaskerville init_messages ""
   , Cmd.none
   )
 
@@ -43,10 +46,31 @@ view model =
   body []
   [
     div []
-    [ h1 [] [text "Hello Elm!"]
-    , messagesView model.messages
-    ]
+      [ h1 [] [text "2020 Salon"]
+      , userView model.user
+      , messagesView model.messages
+      , composeView
+      ]
   ]
+
+
+-- USER VIEW: edit username
+
+userView : User -> Html Msg
+userView user =
+  div []
+    [ label [] [text "Username: "]
+    , input
+        [ type_ "text"
+        , placeholder "username"
+        , value user.name
+        , onInput SetUsername
+        ]
+        []
+    ]
+
+
+-- MESSAGES VIEW: show messages
 
 messagesView : List Message -> Html Msg
 messagesView messages =
@@ -56,9 +80,25 @@ messagesView messages =
 messageView : Message -> Html Msg
 messageView message =
   div []
-  [ h2 [] [text (message.author.name ++ " at " ++ (formatDate message.date))]
-  , p [] [text message.body]
-  ]
+    [ h2 [] [text (message.author.name ++ " at " ++ (formatDate message.date))]
+    , p [] [text message.body]
+    ]
+
+
+-- COMPOSE VIEW: compose new messages
+
+composeView: Html Msg
+composeView =
+  div []
+    [ input
+        [ type_ "text"
+        , placeholder "Write a message"
+        , onInput UpdateNextMessageBody
+        ]
+        []
+    , button [onClick PostMessage] [text "Post"]
+    ]
+
 
 -- ELM MESSAGE
 
@@ -67,13 +107,25 @@ formatDate date =
   toString date
 
 type Msg
-  = None
+  = SetUsername String
+  | UpdateNextMessageBody String
+  | PostMessage
 
 -- UPDATE
 
 update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
-  (model, Cmd.none)
+  case msg of
+    SetUsername name ->
+      ({model | user = (User name)}, Cmd.none)
+    UpdateNextMessageBody body ->
+      ({model | nextMessageBody = body}, Cmd.none)
+    PostMessage ->
+      ( { model | messages =
+        ( model.messages ++ [Message model.user model.nextMessageBody (fromTime ((1515532366 - 3600) * 1000))] )
+        }
+      , Cmd.none
+      )
 
 -- SUBSCRIPTIONS
 
