@@ -3,7 +3,9 @@ module Main exposing (..)
 import Html exposing (Html, body, div, h1, h2, p, input, text, label, button)
 import Html.Attributes exposing (style, type_, placeholder, value)
 import Html.Events exposing (onInput, onClick)
-import Date exposing (..)
+import Date exposing (Date)
+
+import Json.Decode exposing (..)
 
 -- MODEL
 
@@ -14,8 +16,23 @@ type alias User =
 type alias Message =
   { author : User
   , body   : String
-  , date   : Date
+  , date   : Maybe Date
   }
+
+parseDate : String -> Maybe Date
+parseDate dateString =
+  let
+    dateResult = Date.fromString dateString
+  in
+    case dateResult of
+      Ok date ->
+        Just date
+      Err date ->
+        Nothing
+
+makeMessage : String -> String -> String -> Message
+makeMessage authorString bodyString dateString =
+  Message (User authorString) bodyString (parseDate dateString)
 
 type alias Model =
   { user     : User
@@ -23,15 +40,46 @@ type alias Model =
   , nextMessageBody : String
   }
 
+
+-- JSON DECODING
+
+messageDecoder = map3 makeMessage (field "author" string) (field "body" string) (field "created_at" string)
+messagesDecoder = list messageDecoder
+
+
 -- INIT
+
+init_messages_json =
+  """
+  [
+    {
+      "id": 1,
+      "author": "Peter",
+      "body": "Hello, World",
+      "created_at": "2018-01-07T06:01:23.543Z"
+    },
+    {
+      "id": 2,
+      "author": "Ed",
+      "body": "Hello, API (from curl)",
+      "created_at": "2018-01-10T08:18:09.783Z"
+    }
+  ]
+  """
+
+init_messages_test =
+  decodeString messagesDecoder init_messages_json
 
 edbaskerville = User "edbaskerville"
 peidran = User "peidran"
 
 init_messages =
-  [ Message edbaskerville "12:56 PM" (fromTime ((1515532452 - 7200) * 1000))
-  , Message peidran "What time is it?" (fromTime ((1515532366 - 3600) * 1000))
-  ]
+  case init_messages_test of
+    Ok messages ->
+      messages
+    
+    Err err ->
+      []
 
 init : (Model, Cmd Msg)
 init =
@@ -63,7 +111,7 @@ userView user =
     , input
         [ type_ "text"
         , placeholder "username"
-        , value user.name
+        , Html.Attributes.value user.name
         , onInput SetUsername
         ]
         []
@@ -102,9 +150,13 @@ composeView =
 
 -- ELM MESSAGE
 
-formatDate : Date -> String
+formatDate : Maybe Date -> String
 formatDate date =
-  toString date
+  case date of
+    Just date ->
+      toString date
+    Nothing ->
+      "(date not present)"
 
 type Msg
   = SetUsername String
@@ -122,7 +174,7 @@ update msg model =
       ({model | nextMessageBody = body}, Cmd.none)
     PostMessage ->
       ( { model | messages =
-        ( model.messages ++ [Message model.user model.nextMessageBody (fromTime ((1515532366 - 3600) * 1000))] )
+        ( model.messages ++ [Message model.user model.nextMessageBody Nothing] )
         }
       , Cmd.none
       )
