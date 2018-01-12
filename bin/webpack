@@ -1,4 +1,5 @@
 #!/usr/bin/env ruby
+<<<<<<< HEAD
 # frozen_string_literal: true
 
 #
@@ -27,3 +28,12 @@ require "rubygems"
 require "bundler/setup"
 
 load Gem.bin_path("webpacker", "webpack")
+=======
+
+ENV["RAILS_ENV"] ||= ENV["RACK_ENV"] || "development"
+ENV["NODE_ENV"] ||= ENV["RAILS_ENV"]
+
+require "webpacker"
+require "webpacker/webpack_runner"
+Webpacker::WebpackRunner.run(ARGV)
+>>>>>>> 8c462f84a16223b6c81b382486c1b4fff11ebc41

@@ -8,6 +8,15 @@ class MessagesController < ApplicationController
   end
 
   def index
-    render json: Message.order(:created_at)
+    messages = Message.order(:created_at)
+
+    respond_to do |format|
+      format.json do
+        render json: messages
+      end
+      format.html do
+        render action: 'index', locals: {messages: messages}
+      end
+    end
   end
 end
