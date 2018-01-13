@@ -194,7 +194,7 @@ update msg model =
 postMessage : Model -> Cmd Msg
 postMessage model =
   Http.send AddMessage <|
-    Http.post "http://salon2020.herokuapp.com/messages"
+    Http.post "/messages"
       ( Http.jsonBody (
           Json.Encode.object
           [ ("author", Json.Encode.string model.user.name)
@@ -207,7 +207,7 @@ postMessage model =
 getMessages : Cmd Msg
 getMessages =
   Http.send UpdateMessages <|
-    Http.get "http://salon2020.herokuapp.com/messages" messagesDecoder
+    Http.get "/messages" messagesDecoder
 
 
 -- SUBSCRIPTIONS
